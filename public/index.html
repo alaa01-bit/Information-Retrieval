@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Search Engine</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .options {
+            margin-top: 10px;
+        }
+
+        #results {
+            margin-top: 20px;
+        }
+
+        .result-item {
+            border-bottom: 1px solid #ddd;
+            padding: 15px 0;
+        }
+
+        .restaurant-name {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #2c3e50;
+        }
+
+        .sentiment-score {
+            float: right;
+            font-size: 0.9em;
+            color: green;
+        }
+
+        .review-text {
+            color: #555;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Restaurant Search</h1>
+
+    <div class="search-box">
+        <input type="text" id="query" placeholder="e.g., 'spicy pasta' OR 'pizza AND cheap'" />
+        <button onclick="performSearch()">Search</button>
+
+        <div class="options">
+            <label>
+                <input type="checkbox" id="boostSentiment"> Boost Positive Reviews (Sentiment Ranking)
+            </label>
+            <br>
+            <small>Supports: Boolean (AND/OR), Wildcard (*), Fuzzy (~), Range ([1 TO 5])</small>
+            <br><br>
+            <a href="/api/evaluate" target="_blank" style="font-size: 0.8em; color: gray;">Run Evaluation Metrics
+                (JSON)</a>
+        </div>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        async function performSearch() {
+            const query = document.getElementById('query').value;
+            const boost = document.getElementById('boostSentiment').checked;
+            const resultsDiv = document.getElementById('results');
+
+            resultsDiv.innerHTML = '<p>Searching...</p>';
+
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&boost=${boost}`);
+                const data = await response.json();
+
+                resultsDiv.innerHTML = '';
+
+                if (data.length === 0) {
+                    resultsDiv.innerHTML = '<p>No results found.</p>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'result-item';
+
+                    // Format score to 2 decimal places
+                    const score = parseFloat(item.score).toFixed(2);
+                    const sentiment = parseFloat(item.sentiment).toFixed(2);
+
+                    div.innerHTML = `
+                        <div class="restaurant-name">
+                            ${item.restaurant} 
+                            <span class="sentiment-score">Ir-Score: ${score} | Sentiment: ${sentiment}</span>
+                        </div>
+                        <div class="review-text">"${item.review}"</div>
+                    `;
+                    resultsDiv.appendChild(div);
+                });
+
+            } catch (error) {
+                console.error(error);
+                resultsDiv.innerHTML = '<p style="color:red">Error fetching results.</p>';
+            }
+        }
+
+        // Allow Enter key to search
+        document.getElementById("query").addEventListener("keyup", function (event) {
+            if (event.keyCode === 13) {
+                event.preventDefault();
+                performSearch();
+            }
+        });
+    </script>
+</body>
+
+</html>
